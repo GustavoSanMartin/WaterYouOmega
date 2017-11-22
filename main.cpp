@@ -8,12 +8,12 @@ using namespace std;
 class Network {
 public:
     Network(){
-
+        cout << "constructor" << endl;
     }
-    bool fetchRequests(){
-
+    void fetchRequests(bool& arg1, bool& arg2){
+        system("curl -k \"https://script.google.com/macros/s/AKfycbwPE9mfnqfUhx8GCZrJ0J-AzaJAS2S08IFjy1R8NC93vvIXurk/exec?pWater=1&pAuto=1\" | tee test.txt");
     }
-    void updateState(){
+    void updateState(bool arg1, bool arg2){
 
     }
     ~Network(){
@@ -61,8 +61,11 @@ private:
     const int sensorPort = 7;
 };
 int main() {
+    bool Water = false, Auto = false;
     Omega omega9E1A;
     Network network;
+
+    network.fetchRequests(Water, Auto);
 
     ofstream logFile;
     logFile.open("WaterYouLog.csv");
