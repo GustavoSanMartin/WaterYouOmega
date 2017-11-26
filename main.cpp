@@ -1,6 +1,10 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <stdlib.h>
+#include <chrono>
+#include <thread>
+
 using namespace std;
 
 /**
@@ -135,35 +139,95 @@ public:
 
     }
 
-    void setAuto(bool autoOn){
-
-    }
-
-    bool getAuto(){
-
-    }
-
     int getSoilHumidity(){
-
+        return 0;
     }
 
     ~Omega(){
 
     }
 private:
-    const int relaySwitch = 1;
-    const int sensorPort = 7;
+
 };
+
+/*class Log{
+public:
+    Log(const string filename){
+        LogFile.open(filename);
+    }
+    void add(const string logText){
+        LogFile << logText << endl;
+    }
+    void add(const int logNum){
+        string s = to_string(logNum);
+        s += "\n";
+        LogFile << logText << endl;
+    }
+    void add(const bool arg1, const bool arg2){
+        string sArg1 = "0";
+        string sArg2 = "0";
+
+        if (arg1)
+            sArg1 = "1";
+        if (arg2)
+            sArg1 = "1";
+
+        string logText = "Water: " + sArg1 + ", Auto: " + sArg2 + "\n";
+        LogFile << logText << endl;
+    }
+    ~Log(){
+        LogFile.close;
+    }
+
+private:
+    static ofstream LogFile;
+};*/
+
 int main() {
     bool Water = true, Auto = false;
+    int soilHumidity = 0;
+    int threshold = 75;
     Omega omega9E1A;
     Network network;
+    unsigned long long currentTick = 0;
+    unsigned long long tickAtPumpOn = 0;
 
-    cout << "return: " << network.push(Water, Auto) << endl;
-    cout << "Water: " << Water << endl;
-    cout << "Auto: " << Auto << endl;
+    //Log log("WaterYouLog.txt");
+    //log.add("booting");
 
-    ofstream logFile;
-    logFile.open("WaterYouLog.csv");
+    //loop infinitely. Step once every 2 seconds
+    while (currentTick < 30){ //runs for 1 minute
+        network.fetch(Water, Auto); //check for updates (user input) from the server
+
+        cout << "Water: " << Water << endl << "Auto: " << Auto << endl;
+        //log.add(Water, Auto);
+
+        /*if (Auto){
+            soilHumidity = omega9E1A.getSoilHumidity();
+            //log.add(soilHumidity);
+
+            //if the soil is less than some threshold (if it is too dry) AND the pump is not already on, turn on the pump
+            if (soilHumidity < threshold && !omega9E1A.getPump()){
+                omega9E1A.setPump(true);
+                //log.add("pump on");
+                Water = true;
+            }
+
+            //turn off the water pump after 2 ticks (6 seconds)
+            if (Water && currentTick > tickAtPumpOn + 2){
+                omega9E1A.setPump(false);
+                Water = false;
+            }
+
+            //update the server with any changes made in the current iteration of the loop
+            network.push(Water, Auto);
+        }*/
+
+        //pause the program for 2 seconds
+        chrono::seconds duration(2);
+        this_thread::sleep_for(duration);
+        currentTick++;
+    }
+
     return 0;
 }
