@@ -2,8 +2,7 @@
 #include <fstream>
 #include <cstring>
 #include <stdlib.h>
-#include <chrono>
-#include <thread>
+#include <unistd.h>
 
 using namespace std;
 
@@ -224,9 +223,7 @@ int main() {
         }*/
 
         //pause the program for 2 seconds
-        chrono::seconds duration(2);
-        this_thread::sleep_for(duration);
-        currentTick++;
+        sleep(1);
     }
 
     return 0;
