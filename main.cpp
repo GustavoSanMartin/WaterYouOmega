@@ -12,7 +12,6 @@ using namespace std;
 class Network {
 public:
     Network(){
-        cout << "constructor" << endl;
     }
 
     /**
@@ -117,8 +116,6 @@ public:
     ~Network(){
 
     }
-
-private:
 };
 
 /**
@@ -127,26 +124,28 @@ private:
 class Omega{
 public:
     Omega(){
-
+        //initialize the relay expansion
+        system("relay-exp -i");
     }
 
     void setPump(bool pumpOn){
-
+        if (pumpOn)
+            system("relay-exp 0 1");
+        else
+            system("relay-exp 0 0");
     }
 
-    bool getPump(){
-
-    }
-
-    int getSoilHumidity(){
-        return 0;
+    void setLamp(bool lampOn){
+        if (lampOn)
+            system("relay-exp 1 1");
+        else
+            system("relay-exp 1 0");
     }
 
     ~Omega(){
 
     }
 private:
-
 };
 
 /*class Log{
@@ -183,47 +182,31 @@ private:
 };*/
 
 int main() {
-    bool Water = true, Auto = false;
-    int soilHumidity = 0;
-    int threshold = 75;
+    bool Water = false, Lamp = false;
+
     Omega omega9E1A;
     Network network;
+
     unsigned long long currentTick = 0;
     unsigned long long tickAtPumpOn = 0;
 
     //Log log("WaterYouLog.txt");
     //log.add("booting");
 
-    //loop infinitely. Step once every 2 seconds
-    while (currentTick < 30){ //runs for 1 minute
-        network.fetch(Water, Auto); //check for updates (user input) from the server
+    //loop for 30 seconds. Step once every second
+    while (currentTick < 30){ //runs for 30 seconds
+        network.fetch(Water, Lamp); //check for updates (user input) from the server
 
-        cout << "Water: " << Water << endl << "Auto: " << Auto << endl;
+        cout << "Water: " << Water << endl << "Auto: " << Lamp << endl;
+
+        omega9E1A.setPump(Water);
+
+
         //log.add(Water, Auto);
 
-        /*if (Auto){
-            soilHumidity = omega9E1A.getSoilHumidity();
-            //log.add(soilHumidity);
-
-            //if the soil is less than some threshold (if it is too dry) AND the pump is not already on, turn on the pump
-            if (soilHumidity < threshold && !omega9E1A.getPump()){
-                omega9E1A.setPump(true);
-                //log.add("pump on");
-                Water = true;
-            }
-
-            //turn off the water pump after 2 ticks (6 seconds)
-            if (Water && currentTick > tickAtPumpOn + 2){
-                omega9E1A.setPump(false);
-                Water = false;
-            }
-
-            //update the server with any changes made in the current iteration of the loop
-            network.push(Water, Auto);
-        }*/
-
-        //pause the program for 2 seconds
+        //pause the program for 1 second
         sleep(1);
+        currentTick++;
     }
 
     return 0;
