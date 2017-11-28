@@ -3,6 +3,7 @@
 #include <cstring>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 using namespace std;
 
@@ -126,26 +127,42 @@ public:
     Omega(){
         //initialize the relay expansion
         system("relay-exp -i");
+
+        //assign default values for the pins
+        pump = false;
+        lamp = false;
     }
 
     void setPump(bool pumpOn){
+        pump = pumpOn;
         if (pumpOn)
             system("relay-exp 0 1");
         else
             system("relay-exp 0 0");
     }
 
+    bool getPump(){
+        return pump;
+    }
+
     void setLamp(bool lampOn){
+        lamp = lampOn;
         if (lampOn)
             system("relay-exp 1 1");
         else
             system("relay-exp 1 0");
     }
 
+    bool getLamp(){
+        return lamp;
+    }
+
     ~Omega(){
 
     }
 private:
+    bool pump;
+    bool lamp;
 };
 
 /*class Log{
@@ -188,25 +205,34 @@ int main() {
     Network network;
 
     unsigned long long currentTick = 0;
-    unsigned long long tickAtPumpOn = 0;
+    clock_t tickAtPumpOn = 0;
 
     //Log log("WaterYouLog.txt");
     //log.add("booting");
 
     //loop for 30 seconds. Step once every second
-    while (currentTick < 30){ //runs for 30 seconds
-        network.fetch(Water, Lamp); //check for updates (user input) from the server
+    while (true){
+        //check for updates (user input) from the server; store them in local booleans
+        network.fetch(Water, Lamp);
 
         cout << "Water: " << Water << endl << "Auto: " << Lamp << endl;
-
-        omega9E1A.setPump(Water);
-
-
         //log.add(Water, Auto);
+
+        //if the value obtained from the server for the pump is ON and the current state of the pump is OFF
+        //(in other words, if the pump ON command was recently requested)
+        if (Water && !omega9E1A.getPump())
+            tickAtPumpOn = clock(); //check the time when the pump was turned on
+
+        //if the pump has been on for 3 seconds
+        if (clock() > tickAtPumpOn + 3*CLOCKS_PER_SEC)
+            Water = false;
+
+        //set the state of the components
+        omega9E1A.setPump(Water);
+        omega9E1A.setLamp(Lamp);
 
         //pause the program for 1 second
         sleep(1);
-        currentTick++;
     }
 
     return 0;
