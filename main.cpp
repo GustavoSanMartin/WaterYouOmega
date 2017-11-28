@@ -11,8 +11,9 @@ public:
         cout << "constructor" << endl;
     }
     void fetchRequests(bool& arg1, bool& arg2){
-        //accesses the online server and stores the html text in a text file.
         system("curl -k \"https://script.google.com/macros/s/AKfycbwPE9mfnqfUhx8GCZrJ0J-AzaJAS2S08IFjy1R8NC93vvIXurk/exec?pWater=1&pAuto=1\" | tee test.txt");
+        fstream test;
+        test.open("test.txt");
 
     }
     void updateState(bool arg1, bool arg2){
