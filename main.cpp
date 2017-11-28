@@ -133,18 +133,34 @@ public:
         lamp = false;
     }
 
+    /**
+     * control the physical state of the pump by opening and closing the relay switch
+     * the relay switch is controlled through a system command which can only run on the Omega
+     * @param pumpOn whether or not the pump is to be switched on (true: switch the pump on)
+     */
     void setPump(bool pumpOn){
+        //remember if the pump is on
         pump = pumpOn;
+
         if (pumpOn)
-            system("relay-exp 0 1");
+            system("relay-exp 0 1"); //turn relay switch 0 ('0') on ('1')
         else
-            system("relay-exp 0 0");
+            system("relay-exp 0 0"); //turn relay switch 0 ('0') off ('0')
     }
 
+    /**
+     * get the current state of the pump
+     * @return whether or not the pump is currently turned on (if true, the pump is on)
+     */
     bool getPump(){
         return pump;
     }
 
+    /**
+     * control the physical state of the lamp by opening and closing the relay switch
+     * the relay switch is controlled through a system command which can only run on the Omega
+     * @param lampOn whether or not the lamp is to be switched on (true: switch the lamp on)
+     */
     void setLamp(bool lampOn){
         lamp = lampOn;
         if (lampOn)
@@ -153,6 +169,10 @@ public:
             system("relay-exp 1 0");
     }
 
+    /**
+     * get the current state of the lamp
+     * @return whether or not the lamp is currently turned on (if true, the lamp is on)
+     */
     bool getLamp(){
         return lamp;
     }
