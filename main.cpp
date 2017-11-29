@@ -24,7 +24,7 @@ public:
      *          2 Error: Could not find "!START!" in server response
      *          3 Error: Server response is not a boolean
      */
-    int fetch(bool& arg1, bool& arg2){
+    int fetch(bool& arg1, bool& arg2, int& arg3){
         //GET parameters from Google scripts server
         // system command stores the returned html text in a text file.
         system("curl -k \"https://script.google.com/macros/s/AKfycbwPE9mfnqfUhx8GCZrJ0J-AzaJAS2S08IFjy1R8NC93vvIXurk/exec\" | tee response.html");
@@ -46,20 +46,27 @@ public:
         }
 
         //convert string values to boolean values
-        if (htmlLine.substr(startLocation+9, 1) == "1")
+        int arg1Pos = startLocation+9;
+        if (htmlLine.substr(arg1Pos, 1) == "1")
             arg1 = true;
-        else if (htmlLine.substr(startLocation+9, 1) == "0")
+        else if (htmlLine.substr(arg1Pos, 1) == "0")
             arg1 = false;
         else
             return 3;
 
-        if (htmlLine.substr(startLocation+13, 1) == "1")
+        int arg2Pos = startLocation+13;
+        if (htmlLine.substr(arg2Pos, 1) == "1")
             arg2 = true;
-        else if (htmlLine.substr(startLocation+13, 1) == "0")
+        else if (htmlLine.substr(arg2Pos, 1) == "0")
             arg2 = false;
         else
             return 3;
 
+        int arg3Pos = startLocation+17;
+        int arg3End = htmlLine.find("!END!")-1; //end is 1 character before !END!
+        int arg3Length = arg3End-arg3Pos; //Length = end position - initial position
+        arg3 = atoi(htmlLine.substr(arg3Pos, arg3Length).c_str());
+        cout << "timer" << arg3;
         return 0;
     }
 
@@ -185,20 +192,28 @@ private:
     bool lamp;
 };
 
-/*class Log{
+class Log{
 public:
     Log(const string filename){
-        LogFile.open(filename);
+        Log::filename = filename;
     }
     void add(const string logText){
+        ofstream LogFile;
+        LogFile.open(filename);
         LogFile << logText << endl;
+        LogFile.close();
     }
     void add(const int logNum){
+        ofstream LogFile;
+        LogFile.open(filename);
         string s = to_string(logNum);
         s += "\n";
-        LogFile << logText << endl;
+        LogFile << s << endl;
+        LogFile.close();
     }
     void add(const bool arg1, const bool arg2){
+        ofstream LogFile;
+        LogFile.open(filename);
         string sArg1 = "0";
         string sArg2 = "0";
 
@@ -209,17 +224,16 @@ public:
 
         string logText = "Water: " + sArg1 + ", Auto: " + sArg2 + "\n";
         LogFile << logText << endl;
-    }
-    ~Log(){
-        LogFile.close;
+        LogFile.close();
     }
 
 private:
-    static ofstream LogFile;
-};*/
+    string filename;
+};
 
 int main() {
     bool Water = false, Lamp = false;
+    int Timer = 0;
 
     Omega omega9E1A;
     Network network;
@@ -227,16 +241,16 @@ int main() {
     unsigned long long currentTick = 0;
     clock_t tickAtPumpOn = 0;
 
-    //Log log("WaterYouLog.txt");
-    //log.add("booting");
+    Log log("WaterYouLog.txt");
+    log.add("booting");
 
-    //loop for 30 seconds. Step once every second
-    while (true){
+    //loop until -1 input
+    while (Timer!=-1){
         //check for updates (user input) from the server; store them in local booleans
-        network.fetch(Water, Lamp);
+        network.fetch(Water, Lamp, Timer);
 
-        cout << "Water: " << Water << endl << "Auto: " << Lamp << endl;
-        //log.add(Water, Auto);
+        cout << "Water: " << Water << endl << "Auto: " << Lamp << << "Timer: " << Timer << endl;
+        log.add(Water, Lamp);
 
         //if the value obtained from the server for the pump is ON and the current state of the pump is OFF
         //(in other words, if the pump ON command was recently requested)
