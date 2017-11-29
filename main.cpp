@@ -3,7 +3,7 @@
 #include <cstring>
 #include <stdlib.h>
 #include <unistd.h>
-#include <time.h>
+#include <climits>
 
 using namespace std;
 
@@ -63,10 +63,10 @@ public:
             return 3;
 
         int arg3Pos = startLocation+17;
-        int arg3End = htmlLine.find("!END!")-1; //end is 1 character before !END!
+        int arg3End = htmlLine.find("!END!"); //end is 1 character before !END!
         int arg3Length = arg3End-arg3Pos; //Length = end position - initial position
         arg3 = atoi(htmlLine.substr(arg3Pos, arg3Length).c_str());
-        cout << "timer" << arg3;
+
         return 0;
     }
 
@@ -79,21 +79,28 @@ public:
      *          2 Error: server did not output (could not find "!START!")
      *          3 Error: server returned an error
      */
-    int push(bool arg1, bool arg2){
+    int push(const bool arg1, const bool arg2, const int arg3){
+        //convert argument 1 to a string
         string sArg1 = "0";
         if (arg1)
             sArg1 = "1";
 
+        //convert argument 2 to a string
         string sArg2 = "0";
         if (arg2)
             sArg2 = "1";
+
+        //convert argument 3 to a string (int to string)
+        string sArg3 = to_string(arg3);
+
 
         //GET parameters from Google scripts server
         // system command stores the returned html text in a text file.
         string command = "curl -k ";
         command += "\"https://script.google.com/macros/s/AKfycbwPE9mfnqfUhx8GCZrJ0J-AzaJAS2S08IFjy1R8NC93vvIXurk/exec?";
         command += "pWater=" + sArg1;
-        command += "&pAuto=" + sArg2;
+        command += "&pLamp=" + sArg2;
+        command += "&pTimer=" + sArg3;
         command += "\" | tee response.html";
         cout << command << endl;
         const char* cCommand = command.c_str();
@@ -232,41 +239,83 @@ private:
 };
 
 int main() {
-    bool Water = false, Lamp = false;
+    bool Water = true, Lamp = false;
+    bool TimerOn = false;
     int Timer = 0;
+    int TimerCount = 1;
 
     Omega omega9E1A;
     Network network;
 
     unsigned long long currentTick = 0;
-    clock_t tickAtPumpOn = 0;
+    unsigned long long tickAtPumpOn = ULLONG_MAX-2; //-2 to avoid overflow. high value meaning it has never been triggered
+    unsigned long long tickAtTimerOn = 0;
 
     Log log("WaterYouLog.txt");
     log.add("booting");
 
-    //loop until -1 input
-    while (Timer!=-1){
+    //loop until negative input
+    while (Timer>=0){
         //check for updates (user input) from the server; store them in local booleans
         network.fetch(Water, Lamp, Timer);
 
-        cout << "Water: " << Water << endl << "Auto: " << Lamp << << "Timer: " << Timer << endl;
+        //if the timer is turned off run the manual controls
+        if (Timer == 0) {
+            TimerOn = false;
+
+            //if the value obtained from the server for the pump is ON and the current state of the pump is OFF
+            //(in other words, if the pump ON command was recently requested)
+            if (Water && !omega9E1A.getPump())
+                tickAtPumpOn = clock(); //check the time when the pump was turned on
+
+            //if the pump has been on for 4(2sec/tick*ticks = 4 seconds) seconds
+            if (currentTick > tickAtPumpOn+2) {
+                Water = false;
+                tickAtPumpOn = ULLONG_MAX-2;
+
+                //notify server that pump is off
+                network.push(Water, Lamp, Timer);
+            }
+
+            //set the state of the components
+            omega9E1A.setPump(Water);
+            omega9E1A.setLamp(Lamp);
+        }
+
+        //if the timer is on (has been on for some time)
+        if (TimerOn){
+            cout << "ticks until pump on: " << (tickAtTimerOn + (1800*Timer) * TimerCount) - currentTick << endl;
+            //if the timer has been on for the set amount of time
+            // (1800 ticks per hour) * (the number of times the timer has already been triggered)
+            if (currentTick > tickAtTimerOn + (1800*Timer) * TimerCount) {
+                TimerCount++;
+                Water = true;
+                tickAtPumpOn = currentTick;
+                cout << "WATERING THE PLANT!!" << endl;
+            }
+
+            //if the pump has been on for 4 seconds, shut it off
+            if (currentTick > tickAtPumpOn+2) {
+                Water = false;
+                tickAtPumpOn = ULLONG_MAX-2;
+                cout << "DONE WATERING THE PLANT" << endl;
+            }
+
+            //set the value for the pump
+            omega9E1A.setPump(Water);
+        }
+            //if the timer has just been turned on
+        else if (Timer > 0){
+            TimerOn = true;
+            tickAtTimerOn = currentTick;
+        }
+
+        cout << endl << "Water: " << Water << " Auto: " << Lamp << " Timer: " << Timer << endl;
         log.add(Water, Lamp);
-
-        //if the value obtained from the server for the pump is ON and the current state of the pump is OFF
-        //(in other words, if the pump ON command was recently requested)
-        if (Water && !omega9E1A.getPump())
-            tickAtPumpOn = clock(); //check the time when the pump was turned on
-
-        //if the pump has been on for 3 seconds
-        if (clock() > tickAtPumpOn + 3*CLOCKS_PER_SEC)
-            Water = false;
-
-        //set the state of the components
-        omega9E1A.setPump(Water);
-        omega9E1A.setLamp(Lamp);
 
         //pause the program for 1 second
         sleep(1);
+        currentTick++;
     }
 
     return 0;
